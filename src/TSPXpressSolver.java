@@ -1,6 +1,7 @@
 import com.dashoptimization.*;
 import javafx.util.Pair;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -8,13 +9,14 @@ import java.util.Map;
 /**
  * Created by mruiz on 13/04/2016.
  */
-public class TSPXpressSolver implements XPRSmessageListener, XPRSpreIntsolListener, XPRScutMgrListener {
+public class TSPXpressSolver implements XPRSmessageListener, XPRSpreIntsolListener, XPRScutMgrListener, XPRSoptNodeListener {
     public XPRB bcl;
     public XPRBprob problem;
     public TSPInstance instance;
 
     public LinkedHashMap<Pair<Integer, Integer>, XPRBvar> variables = new LinkedHashMap<>();
     public LinkedList<XPRBcut> cuts = new LinkedList<>();
+    public int cutId = 0;
 
     public TSPXpressSolver(TSPInstance instance) {
         this.instance = instance;
@@ -28,13 +30,7 @@ public class TSPXpressSolver implements XPRSmessageListener, XPRSpreIntsolListen
         bcl = new XPRB();
         // Create a new problem in BCL
         problem = bcl.newProb(instance.toString());
-//
-//        XPRB.setMsgLevel(4);
-//        problem.setMsgLevel(4);
-        problem.setCutMode(1);
-        problem.getXPRSprob().addMessageListener(this);
-        problem.getXPRSprob().addPreIntsolListener(this);
-        problem.getXPRSprob().addCutMgrListener(this);
+        XPRS.init();
 
         variables = new LinkedHashMap<>();
         XPRBexpr obj = new XPRBexpr();
@@ -62,7 +58,7 @@ public class TSPXpressSolver implements XPRSmessageListener, XPRSpreIntsolListen
 
     public void XPRSmessageEvent(XPRSprob prob,
                                  Object data, String msg, int len, int type) {
-        System.out.println(msg);
+        System.out.println("XPRSmessageEvent  : " + msg);
     }
 
     public TSPInstance getInstance() {
@@ -103,16 +99,17 @@ public class TSPXpressSolver implements XPRSmessageListener, XPRSpreIntsolListen
                 result.add(tour);
             }
         }
-        System.out.println("Number of sub tour " + result.size());
         return result;
     }
 
     XPRBexpr getCut(LinkedList<Integer> tour) {
         XPRBexpr xprBexpr = new XPRBexpr();
+        double cutValue = 0;
         for (int i : tour) {
             for (int j : tour) {
                 if (i < j) {
                     xprBexpr.addTerm(getVar(i, j), 1);
+                    cutValue += getVar(i, j).getSol();
                 }
             }
         }
@@ -132,59 +129,103 @@ public class TSPXpressSolver implements XPRSmessageListener, XPRSpreIntsolListen
         }
     }
 
-    @Override
-    public void XPRSpreIntsolEvent(XPRSprob xprSprob, Object o, boolean b, IntHolder intHolder, DoubleHolder doubleHolder) {
-//        System.out.println("XPRSpreIntsolEvent");
-//
-//        try {
-//            problem.beginCB(xprSprob);
-//            XPRBprob p = (XPRBprob) o;
-//            problem.sync(XPRB.XPRS_SOL);
-//            LinkedList<LinkedList<Integer>> sub_tour = getSubtour();
-//            cuts.clear();
-//            for (LinkedList<Integer> tour : sub_tour) {
-//                if (tour.size() > 1) {
-//                    this.cuts.add(problem.newCut(getCut(tour).lEql(tour.size() - 1.0)));
-//                }
-//            }
-////            if (cuts.size() > 1) {
-//////                XPRSaddcuts(XPRSprob prob, int ncuts, const int mtype[], const
-//////                char qrtype[], const double drhs[], const int mstart[], const int
-//////                mcols[], const double dmatval[]);
-////                int ncuts = 1;
-////                int[] mtype = new int[ncuts];
-////                byte[] qrtype = new byte[ncuts];
-////                double[] drhs = new double[ncuts];
-////                int[] mstart = new int[ncuts + 1];
-////
-////                mtype[0] = 1;
-////                qrtype[0] = 'L';
-////                drhs[0] = 0;
-////                mstart[0] = 0;
-////                mstart[1] = 0;
-////
-////                int[] mcols = new int[ncuts];
-////                double[] dmatval = new double[ncuts];
-////                mcols[0] = 0;
-////                dmatval[0] = 1;
-////                xprSprob.addCuts(ncuts, mtype, qrtype, drhs, mstart, mcols, dmatval);
-////                problem.addCuts(cuts.toArray(new XPRBcut[cuts.size()]));
-////            }
-//            problem.endCB();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+    public void generateCut(XPRBprob bprob, XPRSprob oprob) {
+        LinkedList<LinkedList<Integer>> sub_tour = getSubtour();
+        cuts.clear();
+        for (LinkedList<Integer> tour : sub_tour) {
+            if (tour.size() > 1) {
+                final double rhs = (tour.size() - 1.0);
+                XPRBexpr expr = getCut(tour).add(rhs);
+//                    expr.print();
+                cutId += 1;
+                this.cuts.add(bprob.newCut(expr.lEql(0), cutId));
+            }
+        }
+//        System.out.println("sub_tour.size() = "+sub_tour.size());
+//        for (XPRBcut cut : cuts)
+//            cut.print();
+
     }
 
     @Override
-    public int XPRScutMgrEvent(XPRSprob xprSprob, Object o) {
-        System.out.println("XPRScutMgrEvent");
-        if (cuts.size() > 0) {
-            problem.beginCB(xprSprob);
-            XPRBprob p = (XPRBprob) o;
-            problem.addCuts(cuts.toArray(new XPRBcut[cuts.size()]));
-            problem.endCB();
+    public void XPRSpreIntsolEvent(XPRSprob oprob, Object o, boolean b, IntHolder intHolder, DoubleHolder doubleHolder) {
+        try {
+            XPRBprob bprob = (XPRBprob) o;
+            bprob.beginCB(oprob);
+            bprob.sync(XPRB.XPRS_SOL);
+
+            generateCut(bprob, oprob);
+
+            if (cuts.size() > 1) {
+                int num = oprob.getIntAttrib(XPRS.NODES);
+                intHolder.value = 1;
+                System.out.println(String.format("XPRSpreIntsolEvent  : %4d cuts generated at node %4d", cuts.size(), num));
+            } else {
+            }
+            bprob.endCB();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    @Override
+    public int XPRScutMgrEvent(XPRSprob oprob, Object o) {
+        XPRBprob bprob = (XPRBprob) o;
+        bprob.beginCB(oprob);
+        int num = oprob.getIntAttrib(XPRS.NODES);
+        System.out.println(String.format("XPRScutMgrEvent  : %4d  cuts at node %4d", oprob.getIntAttrib(XPRS.CUTS), num));
+//        if (cuts.size() > 0) {
+//            int num = oprob.getIntAttrib(XPRS.NODES);
+//            System.out.println(String.format("XPRScutMgrEvent  : adding cut to node %4d", num));
+//            bprob.addCuts(cuts.toArray(new XPRBcut[cuts.size()]));
+//        }
+        bprob.endCB();
         return 0;
+    }
+
+    public boolean isIntegerSolution() {
+        boolean result = true;
+        for (XPRBvar var : variables.values()) {
+            if (Math.abs(var.getSol()) > 1e-10 && Math.abs(var.getSol() - 1) > 1e-10) {
+                result = false;
+            }
+            if (!result)
+                break;
+        }
+        return result;
+    }
+
+    @Override
+    public void XPRSoptNodeEvent(XPRSprob oprob, Object o, IntHolder intHolder) {
+        XPRBprob bprob = (XPRBprob) o;
+        oprob.loadCuts(-1,-1);
+        bprob.beginCB(oprob);
+        bprob.sync(XPRB.XPRS_SOL);
+        int num = oprob.getIntAttrib(XPRS.NODES);
+        System.out.println("----------------------------------------------------------------------------------");
+        System.out.println(String.format("XPRSoptNodeEvent  : treating optimal relaxation of node %4d", num));
+        System.out.println(String.format("XPRSoptNodeEvent  : %4d  cuts loaded at node %4d", oprob.getIntAttrib(XPRS.CUTS), num));
+        if (isIntegerSolution()) {
+            System.out.println("integer solution");
+            generateCut(bprob, oprob);
+            if (cuts.size() > 1) {
+                System.out.println(String.format("XPRSoptNodeEvent  : %4d cuts generated at node %4d", cuts.size(), num));
+                XPRBcut[] cutadded = cuts.toArray(new XPRBcut[cuts.size()]);
+                bprob.addCuts(cutadded);
+
+                System.out.println(String.format("XPRSoptNodeEvent  : after addCuts %4d  cuts loaded at node %4d", oprob.getIntAttrib(XPRS.CUTS), num));
+//                try {
+//                    bprob.exportProb(String.format("%d_toto.lp", num));
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//                int itype, int interp, int ncuts, const XPRScut mcutind[]
+//                oprob.loadCuts();
+                //                for (XPRBcut cut : cuts)
+//                    cut.print();
+            } else {
+            }
+        }
+        bprob.endCB();
     }
 }

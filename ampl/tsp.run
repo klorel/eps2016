@@ -1,0 +1,115 @@
+reset;
+set V;
+param V_X{V};
+param V_Y{V};
+
+set V_V := {vi in V, vj in V:vi<vj};
+param D{(vi,vj) in V_V} := sqrt((V_X[vi]-V_X[vj])^2+(V_Y[vi]-V_Y[vj])^2);
+
+param ID_ALL_SUB_TOUR default 0;
+set ALL_SUB_TOUR{1..ID_ALL_SUB_TOUR} default {};
+set SUB_TOUR{v in V};
+param IN_SUB_TOUR{v in V};
+
+param ITE;
+param NB_SUB_TOUR;
+
+set TEMP_TOUR;
+data;
+# param: V: V_X V_Y := include dj38.txt;
+# param: V: V_X V_Y := include att48.txt;
+# param: V: V_X V_Y := include eil101.txt;
+param: V: V_X V_Y := include d1291.txt;
+
+model;
+
+display card(V);
+# display D;
+
+var x{V_V} binary;
+minimize cost: sum{(vi,vj) in V_V}D[vi,vj]*x[vi,vj];
+subject to degree_constraint{v in V}: sum{(v,vj) in V_V}x[v,vj]+sum{(vi,v) in V_V}x[vi,v] = 2;
+subject to sub_tour_ctr{id in 1..ID_ALL_SUB_TOUR:card(ALL_SUB_TOUR[id])>1}:
+	sum{vi in ALL_SUB_TOUR[id], vj in ALL_SUB_TOUR[id]:(vi,vj) in V_V}(x[vi,vj])
+	<= 
+	card(ALL_SUB_TOUR[id])-1;
+
+
+# var y{vi in V, vj in V:vi!=vj} binary;
+# minimize cost: sum{(vi,vj) in V_V}D[vi,vj]*(y[vi,vj]);
+# subject to  in_constraint{v in V}: sum{vj in V:v!=vj}y[v,vj] = 1;
+# subject to out_constraint{v in V}: sum{vi in V:v!=vi}y[vi,v] = 1;
+# subject to sub_tour_ctr{id in 1..ID_ALL_SUB_TOUR:card(ALL_SUB_TOUR[id])>2 and card(ALL_SUB_TOUR[id])<card(V)}:
+	# +sum{vi in V diff ALL_SUB_TOUR[id], vj in ALL_SUB_TOUR[id]:vi<vj and (vi,vj) in V_V}(y[vi,vj])
+	# +sum{vi in ALL_SUB_TOUR[id], vj in V diff ALL_SUB_TOUR[id]:vi>vj and (vi,vj) in V_V}(y[vi,vj])
+	# >=
+	# 2;
+option solver amplxpress;
+option xpress_options "outlev=1 threads=1 ";
+# option xpress_options "outlev=1 threads=8 heurstrategy=0 rootpresolve=0 cutstrategy=0 barrier";
+option solver_msg 0; 
+# option relax_integrality 1;
+
+
+let ITE := 0;
+let NB_SUB_TOUR := 0;
+let{v in V} SUB_TOUR   [v] := {v};
+let{v in V} IN_SUB_TOUR[v] := v;
+repeat{
+	let ITE := ITE+1;
+	# solve ;
+	solve > toto.log;
+	# display cost;
+	# extract sub tour
+	let{v in V} SUB_TOUR   [v] := {v};
+	let{v in V} IN_SUB_TOUR[v] := v;
+	for{(vi,vj) in V_V: x[vi,vj]==1 and IN_SUB_TOUR[vi]!=IN_SUB_TOUR[vj]}{
+			# printf "-------------------\n";
+			# display vi,vj;
+			# display SUB_TOUR[IN_SUB_TOUR[vi]], SUB_TOUR[IN_SUB_TOUR[vj]];
+			
+			let TEMP_TOUR := SUB_TOUR[IN_SUB_TOUR[vj]];
+			let SUB_TOUR[IN_SUB_TOUR[vj]] := {};
+			let SUB_TOUR[IN_SUB_TOUR[vi]] := SUB_TOUR[IN_SUB_TOUR[vi]] union TEMP_TOUR;
+			
+			let{v in TEMP_TOUR}IN_SUB_TOUR[v] := IN_SUB_TOUR[vi];
+			
+			# display SUB_TOUR[IN_SUB_TOUR[vi]];
+			# printf "-------------------\n";
+	}
+	# for{v in V:card(SUB_TOUR[v])>0}{
+		# display SUB_TOUR[v];
+	# }
+	# display sum{v in V}card(SUB_TOUR[v]);
+	# display card(V);
+	let NB_SUB_TOUR := 0;
+	# let{(vi,vj) in V_V}x[vi,vj] := 0;
+	for{v in V:card(SUB_TOUR[v])>0}{
+		let NB_SUB_TOUR := NB_SUB_TOUR+1;
+		let ID_ALL_SUB_TOUR := ID_ALL_SUB_TOUR+1;
+		let ALL_SUB_TOUR[ID_ALL_SUB_TOUR] := SUB_TOUR[v];
+		# let{vi in SUB_TOUR[v], vj in SUB_TOUR[v]:(vi,vj) in V_V}x[vi,vj] := 1;
+	};
+	printf "%6d%6d%20.6f%6d%6d\n", ITE, NB_SUB_TOUR, cost, sum{v in V}card(SUB_TOUR[v]), card(V);
+	# exit;
+}until ITE==10 or NB_SUB_TOUR == 1;
+# display x;
+param NODE{1..card(V)+1};
+param POS{V};
+param POS_CUR;
+
+set ACTIVE_EDGE dimen 2;
+let ACTIVE_EDGE := {(vi,vj) in V_V:x[vi,vj]==1};
+let ACTIVE_EDGE := ACTIVE_EDGE union setof{(vi,vj) in ACTIVE_EDGE}(vj,vi);
+
+let{v in 1..card(V)+1}NODE[v] := 1;
+let{v in V}POS[v] := -1;
+let POS_CUR := 1;
+for{ite in 1..card(V)}{
+	let POS[POS_CUR] := ite;
+	let NODE[ite] := POS_CUR;
+	let POS_CUR := min{(POS_CUR,vj) in ACTIVE_EDGE:POS[vj]==-1}vj;
+};
+display +sum{pos in 1..card(V)}D[min(NODE[pos],NODE[pos+1]),max(NODE[pos],NODE	[pos+1])];
+
+display ID_ALL_SUB_TOUR;

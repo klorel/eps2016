@@ -1,9 +1,12 @@
+import com.dashoptimization.XPRB;
+import com.dashoptimization.XPRBprob;
+import com.dashoptimization.XPRS;
+import com.dashoptimization.XPRSprob;
 import javafx.util.Pair;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.LinkedList;
 
 /**
  * Created by mruiz on 13/04/2016.
@@ -31,13 +34,34 @@ public class TSPExample {
     }
 
     public static void main(String[] args) throws IOException {
-        TSPInstance instance = getInstance(AvailableInstance.att48);
+        TSPInstance instance = getInstance(AvailableInstance.dj38);
         try {
             TSPXpressSolver solver = new TSPXpressSolver(instance);
             solver.buildProblem();
 //            solver.problem.exportProb(XPRB.LP, instance.name + ".lp");
 //            solver.
-            solver.problem.mipOptimise();
+            XPRBprob bprob = solver.problem;
+            XPRSprob oprob = bprob.getXPRSprob();
+
+            bprob.setCutMode(1);
+
+            oprob.addMessageListener(solver);
+            oprob.addPreIntsolListener(solver, bprob);
+            oprob.addCutMgrListener(solver, bprob);
+            oprob.addOptNodeListener(solver, bprob);
+
+            bprob.setMsgLevel(3);
+
+            oprob.setIntControl(XPRS.THREADS, 1);
+            oprob.setIntControl(XPRS.ROOTPRESOLVE, 0);
+            oprob.setIntControl(XPRS.OUTPUTLOG, XPRS.OUTPUTLOG_FULL_OUTPUT);
+
+
+            oprob.setIntControl(XPRS.HEURSTRATEGY, 0);
+            oprob.setIntControl(XPRS.CUTSTRATEGY, 0);
+
+            bprob.setSense(XPRB.MINIM);
+            bprob.mipOptimise();
 //            LinkedList<LinkedList<Integer>> sub_tours = solver.getSubtour();
 //            solver.breakSubTour(sub_tours);
 //            solver.problem.mipOptimise();
