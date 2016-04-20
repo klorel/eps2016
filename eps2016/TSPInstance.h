@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <iterator>
 #include <iomanip>
 #include <memory>
 #include <cstdlib>
