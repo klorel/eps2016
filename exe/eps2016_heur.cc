@@ -21,9 +21,11 @@ int main(int argc, char** argv){
 	heuristic.randomInit(input);
 	std::cout << input << std::endl;
 	if (kind == 0){
-		heuristic.localSearch(input, output);
+		heuristic.localSearch(input, output, true);
 	}
 	else{
+		heuristic.localSearch(input, output, false);
+		input = output.second;
 		heuristic.vns(kind, input, output);
 	}
 	XPRSfree();

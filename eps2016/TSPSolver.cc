@@ -133,6 +133,8 @@ int TSPSolver::add(IntListPtrList const & subTours, XPRSprob prob, bool isCut){
 			}
 			_nCuts += static_cast<int>(rhs.size());
 			XPRSaddcuts(prob, nrows, _mtype.data(), sense.data(), rhs.data(), mstart.data(), clind.data(), coeffs.data());
+			//XPRSstorecuts(prob, nrows, 2,  _mtype.data(), sense.data(), rhs.data(), mstart.data(), NULL, clind.data(), coeffs.data());
+			//XPRSloadcuts(prob, -1, -1, -1, NULL);
 		}
 		else{
 			XPRSaddrows(prob, nrows, ncoeffs, sense.data(), rhs.data(), NULL, mstart.data(), clind.data(), coeffs.data());

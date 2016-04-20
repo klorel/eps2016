@@ -16,6 +16,8 @@ public:
 	std::set<IntSetPtr, IntSetPredicate> _knownSolution;
 	int _nCuts;
 
+	std::vector<DblVector> _heur_solutions;
+
 public:
 	int nPoints()const;
 	int nVariables()const;

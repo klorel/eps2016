@@ -5,9 +5,12 @@ int TSPInstance::nPoints()const{
 }
 
 int TSPInstance::nVariables()const{
+	// (i, j) telle que i<j
 	return nPoints()*(nPoints() - 1) / 2;
 }
+TSPInstance::TSPInstance(){
 
+}
 TSPInstance::TSPInstance(std::string const & fileName){
 	read(fileName);
 	buildDistance();
@@ -22,7 +25,7 @@ void TSPInstance::read(std::string const & fileName){
 	std::ifstream file(fileName.c_str());
 	if (file.is_open()){
 		std::string line;
-		while (std::getline(file, line)){
+		while (std::getline(file, line) && !line.empty()){
 			std::stringstream buffer(line);
 			int id;
 			double x;
@@ -67,6 +70,18 @@ double TSPInstance::computeCost(IntVector const & input){
 		result += _distances[vi][vj];
 	}
 	result += _distances[input.back()][input.front()];
+	return result;
+}
+
+double TSPInstance::computeCost(DblVector const & input){
+	double result(0);
+	for (int i(0); i < nPoints(); ++i){
+		for (int j(i + 1); j < nPoints(); ++j){
+			int const id(getVariable(i, j));
+			if (input[id] > 1 - 1e-6)
+				result += _distances[i][j];
+		}
+	}
 	return result;
 }
 
@@ -196,6 +211,29 @@ void TSPInstance::getTour(DblVector const & input, IntVector & output) {
 		}
 		else{
 			output[pos + 1] = pair.first;
+		}
+	}
+}
+void TSPInstance::clear(){
+	_distances.clear();
+	_coordinates.clear();
+	_variables.clear();
+}
+void TSPInstance::subTsp(IntVector const & input, TSPInstance & output){
+	output.clear();
+	size_t n = input.size();
+	size_t v = n*(n - 1) / 2;
+	output._variables.assign(n, IntVector(n, -1));
+	output._distances.assign(n, DblVector(n, 0));
+	size_t ncols(0);
+	for (size_t i(0); i < n; ++i){
+		for (size_t j(i+1); j < n; ++j, ++ncols){
+			int const vi(input[i]);
+			int const vj(input[j]);
+			output._distances[i][j] = _distances[vi][vj];
+			output._distances[j][i] = output._distances[i][j];
+			output._variables[i][j] = ncols;
+			output._variables[j][i] = ncols;
 		}
 	}
 }

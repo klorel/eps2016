@@ -25,7 +25,8 @@ void TSPAlgo::run_callback(TSPInstance & tsp, IntVector & output, double & obj){
 	//XPRSsetdblcontrol(oprob, XPRS_MIPRELSTOP, 0);
 	//XPRSsetdblcontrol(oprob, XPRS_MIPTOL, 0);
 	XPRSsetcboptnode(oprob, cboptnode, &solver);
-	XPRSsetcbpreintsol(oprob, cbpreintsol, &solver);	
+	XPRSsetcbpreintsol(oprob, cbpreintsol, &solver);
+	XPRSsetcbintsol(oprob, cbintsol, &solver);
 
 	XPRSmipoptimize(oprob, "");
 
@@ -53,8 +54,9 @@ void TSPAlgo::run_iterative(TSPInstance & tsp, IntVector & output, double & obj,
 	solver.log() = false;
 
 	XPRSprob oprob = solver.buildProblem();
-
+	bool log = true;
 	if (!lb.empty() || !ub.empty()){
+		log = false;
 		IntVector indexes(tsp.nVariables());
 		CharVector b(tsp.nVariables(), 'B');
 		CharVector u(tsp.nVariables(), 'U');
@@ -63,6 +65,10 @@ void TSPAlgo::run_iterative(TSPInstance & tsp, IntVector & output, double & obj,
 		}
 		XPRSchgbounds(oprob, indexes.size(), indexes.data(), b.data(), lb.data());
 		XPRSchgbounds(oprob, indexes.size(), indexes.data(), u.data(), ub.data());
+		XPRSsetintcontrol(oprob, XPRS_PRESOLVE, 0);
+		//XPRSsetintcontrol(oprob, XPRS_MIPPRESOLVE, 0);
+		//XPRSsetintcontrol(oprob, XPRS_SYMMETRY, 0);
+		//XPRSsetintcontrol(oprob, XPRS_SYMMETRY, 0);
 	}
 
 	XPRSsetintcontrol(oprob, XPRS_THREADS, 1);
@@ -72,7 +78,7 @@ void TSPAlgo::run_iterative(TSPInstance & tsp, IntVector & output, double & obj,
 	//XPRSsetdblcontrol(oprob, XPRS_MIPRELSTOP, 0);
 	//XPRSsetdblcontrol(oprob, XPRS_MIPTOL, 0);
 
-	run_iterative(tsp, solver, oprob, true);
+	run_iterative(tsp, solver, oprob, log);
 
 	DblVector sol;
 	sol.resize(solver.nVariables());
@@ -112,5 +118,6 @@ void TSPAlgo::run_iterative(TSPInstance & tsp, TSPSolver & solver, XPRSprob & op
 			std::cout << std::endl;
 		}
 	} while (nSubTour > 1);
+	if (log)
 	std::cout << "Nb of cuts generated " << std::setw(10) << nCuts << std::endl;
 }

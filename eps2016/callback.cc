@@ -1,5 +1,6 @@
 #include "callback.h"
 #include <iomanip>
+#include "TSPHeuristic.h"
 
 void XPRS_CC errormsg(const char *sSubName, int nLineNo, int nErrCode) {
 	int nErrNo(0); /* Optimizer error number */
@@ -43,6 +44,13 @@ void XPRS_CC cboptnode(XPRSprob prob, void* vContext, int* feas){
 	DblVector sol;
 	IntListPtrList subtours;
 
+
+	if (!solver->_heur_solutions.empty()){
+		for (auto & sol : solver->_heur_solutions)
+			XPRSaddmipsol(prob, sol.size(), sol.data(), NULL, NULL);
+		solver->_heur_solutions.clear();
+	}
+
 	int MIPINFEAS = tsp->getSolution(prob, sol);
 	double obj;
 	XPRSgetdblattrib(prob, XPRS_LPOBJVAL, &obj);
@@ -75,4 +83,23 @@ void XPRS_CC cbpreintsol(XPRSprob prob, void* vContext, int isheuristic, int* if
 			}
 		}
 	}
+}
+void XPRS_CC cbintsol(XPRSprob prob, void* vContext){
+	TSPSolver*solver = (TSPSolver*)vContext;
+	TSPInstance * tsp(solver->_instance);
+	DblVector sol;
+	IntListPtrList subtours;
+	tsp->getSolution(prob, sol);
+
+	TSPHeuristic heuristic(*solver);
+	IntVector tour;
+	tsp->getTour(sol, tour);
+	SolutionHeur output;
+	if (heuristic.localSearch(tour, output, true)){
+		tsp->getSol(output.second, sol);
+		std::cout << "cost is " << tsp->computeCost(sol) << std::endl;;
+		//XPRSaddmipsol(prob, sol.size(), sol.data(), NULL, NULL);
+		solver->_heur_solutions.push_back(sol);
+	}
+
 }

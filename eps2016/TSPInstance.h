@@ -75,6 +75,7 @@ public:
 	DblMatrix _distances;
 	IntMatrix _variables;
 public:
+	TSPInstance();
 	TSPInstance(std::string const & fileName);
 	~TSPInstance();
 
@@ -82,6 +83,7 @@ public:
 	int nVariables()const;
 
 	double computeCost(IntVector const & input);
+	double computeCost(DblVector const & input);
 
 	bool isInteger(DblVector const &)const;
 	void getTour(DblVector const & input, IntVector &);
@@ -91,7 +93,8 @@ public:
 	int getMipSolution(XPRSprob prob, DblVector & sol);
 	int getSolution(XPRSprob prob, DblVector & sol);
 
-
+	void subTsp(IntVector const & intput, TSPInstance & output);
+	void clear();
 private:
 
 	void read(std::string const & fileName);
