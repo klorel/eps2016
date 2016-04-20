@@ -1,0 +1,11 @@
+FILE(GLOB_RECURSE SRC *.cc *.h) 
+IF(WIN32)
+	
+ELSE()
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fopenmp")
+ENDIF(WIN32)
+ADD_EXECUTABLE(eps2016_mip eps2016_mip.cc)
+TARGET_LINK_LIBRARIES(eps2016_mip eps2016 xprs)
+
+ADD_EXECUTABLE(eps2016_heur eps2016_heur.cc)
+TARGET_LINK_LIBRARIES(eps2016_heur eps2016 xprs)
