@@ -2,9 +2,10 @@
 #include "TSPAlgo.h"
 
 
-TSPHeuristic::TSPHeuristic(TSPSolver & solver) :_instance(solver._instance), _solver(&solver){
+TSPHeuristic::TSPHeuristic(TSPSolver & solver) :_tsp(solver._tsp), _solver(&solver){
 
 }
+
 TSPHeuristic::~TSPHeuristic(){
 
 }
@@ -13,7 +14,7 @@ TSPHeuristic::~TSPHeuristic(){
 
 
 bool TSPHeuristic::localSearch(IntVector const & input, SolutionHeur & output, bool log){
-	double init_cost(_instance->computeCost(input));
+	double init_cost(_tsp->computeCost(input));
 	output.second = input;
 	output.first = init_cost;
 	size_t const n(input.size());
@@ -51,10 +52,10 @@ bool TSPHeuristic::localSearch(IntVector const & input, SolutionHeur & output, b
 		std::cout << v4 << std::endl;
 #endif
 		// better if v1-v2+v3-v4 > v1-v3+v2-v4
-		double const v1_v2(_instance->_distances[v1][v2]);
-		double const v3_v4(_instance->_distances[v3][v4]);
-		double const v1_v3(_instance->_distances[v1][v3]);
-		double const v2_v4(_instance->_distances[v2][v4]);
+		double const v1_v2(_tsp->_distances[v1][v2]);
+		double const v3_v4(_tsp->_distances[v3][v4]);
+		double const v1_v3(_tsp->_distances[v1][v3]);
+		double const v2_v4(_tsp->_distances[v2][v4]);
 		//
 		double const delta(v1_v3 + v2_v4 - v1_v2 - v3_v4);
 		//
@@ -79,11 +80,11 @@ bool TSPHeuristic::localSearch(IntVector const & input, SolutionHeur & output, b
 
 // chose a point at random and then its k neighbor in the solution, 
 size_t TSPHeuristic::shake(size_t k, IntVector const & input, IntVector & subproblem, DblVector & lb, DblVector & ub){
-	int const n(_instance->nPoints());
-	int const p(_solver->nVariables());
+	int const n(_tsp->nPoints());
+	int const p(_tsp->nVariables());
 
 	DblVector sol;
-	_instance->getSol(input, sol);
+	_tsp->getSol(input, sol);
 
 	// all fixed
 	lb = sol;
@@ -93,44 +94,27 @@ size_t TSPHeuristic::shake(size_t k, IntVector const & input, IntVector & subpro
 	size_t const current(input[random_index]);
 	//std::cout << "shaking index " << random_index << ", " << current << std::endl;
 	subproblem.clear();
-	subproblem.push_back(current);
+	subproblem.push_back((int)current);
 	for (size_t i(0); i < k; ++i){
 		size_t const before(input[(random_index - i - 1) % n]);
 		size_t const after(input[(random_index + i + 1) % n]);
-		subproblem.push_back(before);
-		subproblem.push_back(after);
+		subproblem.push_back((int)before);
+		subproblem.push_back((int)after);
 	}
 	//std::cout << "creating a subproblem of size " << subproblem.size() << std::endl;
 	for (size_t i(0); i < subproblem.size(); ++i){
 		int const vi(subproblem[i]);
 		for (size_t j(i + 1); j < subproblem.size(); ++j){
 			int const vj(subproblem[j]);
-			int const id(_instance->getVariable(vi, vj));
+			int const id(_tsp->getVariable(vi, vj));
 			lb[id] = 0;
 			ub[id] = 1;
 		}
 	}
 	return subproblem.size();
 }
-void TSPHeuristic::randomInit(IntVector & output){
-	int const n(_instance->nPoints());
-	output.resize(n);
-	IntVector available(n, 0);
-	for (int i(0); i < n; ++i)
-		available[i] = i;
-	//std::cout << n << std::endl;
-	//std::cout << available << std::endl;
-	//std::exit(0);
-	for (int i(0); i < n; ++i){
-		int const index(std::rand() % (n - i));
-		int k = available[index];
-		std::swap(available[index], available[n - i - 1]);
-		output[i] = k;
-	}
-
-}
 void TSPHeuristic::vns(size_t kMax, IntVector const & input, SolutionHeur & output){
-	int p(_solver->nVariables());
+	int p(_tsp->nVariables());
 
 	DblVector lb(p, 0);
 	DblVector ub(p, 1);
@@ -138,7 +122,7 @@ void TSPHeuristic::vns(size_t kMax, IntVector const & input, SolutionHeur & outp
 	size_t ite(0);
 
 	SolutionHeur current;
-	current.first = _instance->computeCost(input);
+	current.first = _tsp->computeCost(input);
 	current.second = input;
 	SolutionHeur best = current;
 
@@ -156,9 +140,9 @@ void TSPHeuristic::vns(size_t kMax, IntVector const & input, SolutionHeur & outp
 			// create a neighborhood
 			size_t subsize = shake(k, current.second, subproblem, lb, ub);
 			// solve 
-			tspAlgo.run_iterative(*_instance, current.second, current.first, lb, ub);
+			tspAlgo.run_iterative(*_tsp, current.second, current.first, lb, ub);
 			// accept or not the solution
-			if (best.first > current.first + 1e-6){				
+			if (best.first > current.first + 1e-6){
 				localSearch(current.second, best, false);
 				//best = current;
 				std::cout << std::setw(6) << ite;

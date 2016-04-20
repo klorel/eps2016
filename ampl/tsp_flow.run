@@ -3,7 +3,8 @@ set V;
 param V_X{V};
 param V_Y{V};
 
-set V_V := {vi in V, vj in V:vi<vj};
+set V_V := {vi in V, vj in V:vi!=vj};
+
 param D{(vi,vj) in V_V} := sqrt((V_X[vi]-V_X[vj])^2+(V_Y[vi]-V_Y[vj])^2);
 
 param ID_ALL_SUB_TOUR default 0;
@@ -17,9 +18,9 @@ param NB_SUB_TOUR;
 set TEMP_TOUR;
 data;
 # param: V: V_X V_Y := include dj38.txt;
-# param: V: V_X V_Y := include att48.txt;
-# param: V: V_X V_Y := include eil101.txt;
 param: V: V_X V_Y := include ../data/pr1002.txt;
+# param: V: V_X V_Y := include eil101.txt;
+# param: V: V_X V_Y := include d1291.txt;
 
 model;
 
@@ -28,7 +29,8 @@ display card(V);
 
 var x{V_V} binary;
 minimize cost: sum{(vi,vj) in V_V}D[vi,vj]*x[vi,vj];
-subject to degree_constraint{v in V}: sum{(v,vj) in V_V}x[v,vj]+sum{(vi,v) in V_V}x[vi,v] = 2;
+subject to out_flow{v in V}: +sum{(v,vj) in V_V}x[v,vj] = 1;
+subject to  in_flow{v in V}: +sum{(vi,v) in V_V}x[vi,v] = 1;
 subject to sub_tour_ctr{id in 1..ID_ALL_SUB_TOUR:card(ALL_SUB_TOUR[id])>1}:
 	sum{vi in ALL_SUB_TOUR[id], vj in ALL_SUB_TOUR[id]:(vi,vj) in V_V}(x[vi,vj])
 	<= 
@@ -48,8 +50,10 @@ option solver amplxpress;
 option xpress_options "outlev=1 threads=1 ";
 # option xpress_options "outlev=1 threads=8 heurstrategy=0 rootpresolve=0 cutstrategy=0 barrier";
 option solver_msg 0; 
-# option relax_integrality 1;
-
+option relax_integrality 1;
+# solve;
+# display {(vi,vj) in V_V:x[vi,vj] > 1e-6 and x[vi,vj]<1-1e-6};
+# exit;
 
 let ITE := 0;
 let NB_SUB_TOUR := 0;
@@ -57,8 +61,8 @@ let{v in V} SUB_TOUR   [v] := {v};
 let{v in V} IN_SUB_TOUR[v] := v;
 repeat{
 	let ITE := ITE+1;
-	solve ;
-	# solve > toto.log;
+	# solve ;
+	solve > toto.log;
 	# display cost;
 	# extract sub tour
 	let{v in V} SUB_TOUR   [v] := {v};
@@ -110,6 +114,6 @@ for{ite in 1..card(V)}{
 	let NODE[ite] := POS_CUR;
 	let POS_CUR := min{(POS_CUR,vj) in ACTIVE_EDGE:POS[vj]==-1}vj;
 };
-display +sum{pos in 1..card(V)}D[min(NODE[pos],NODE[pos+1]),max(NODE[pos],NODE[pos+1])];
+display +sum{pos in 1..card(V)}D[min(NODE[pos],NODE[pos+1]),max(NODE[pos],NODE	[pos+1])];
 
 display ID_ALL_SUB_TOUR;

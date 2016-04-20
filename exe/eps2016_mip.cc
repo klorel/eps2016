@@ -7,7 +7,7 @@
 #include "TSPSolver.h"
 
 int main(int argc, char** argv){
-	TSPInstance tsp(argv[1]);
+	TSPFormulation tsp(argv[1]);
 
 	std::cout << "TSP with " << tsp.nPoints() << " points " << std::endl;
 	XPRSinit("");

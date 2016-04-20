@@ -20,7 +20,7 @@ void XPRS_CC errormsg(const char *sSubName, int nLineNo, int nErrCode) {
 void XPRS_CC cbmessage(XPRSprob prob, void* data, const char *sMsg, int nLen, int nMsgLvl) {
 	std::string message;
 	message.assign(sMsg, nLen);
-	TSPSolver*solver = (TSPSolver*)data;
+	TSPFormulation *tsp = (TSPFormulation*)data;
 	switch (nMsgLvl) {
 		/* Print Optimizer error messages and warnings */
 	case 4: /* error */
@@ -28,7 +28,7 @@ void XPRS_CC cbmessage(XPRSprob prob, void* data, const char *sMsg, int nLen, in
 	case 2: /* dialogue */
 	case 1: /* information */
 		// printf("%*s\n",nLen,sMsg);
-		if (solver->log())
+		if (tsp->log())
 			std::cout << message << std::endl;
 		break;
 		/* Exit and flush buffers */
@@ -40,14 +40,14 @@ void XPRS_CC cbmessage(XPRSprob prob, void* data, const char *sMsg, int nLen, in
 }
 void XPRS_CC cboptnode(XPRSprob prob, void* vContext, int* feas){
 	TSPSolver*solver = (TSPSolver*)vContext;
-	TSPInstance * tsp(solver->_instance);
+	TSPFormulation * tsp(solver->_tsp);
 	DblVector sol;
 	IntListPtrList subtours;
 
 
 	if (!solver->_heur_solutions.empty()){
 		for (auto & sol : solver->_heur_solutions)
-			XPRSaddmipsol(prob, sol.size(), sol.data(), NULL, NULL);
+			XPRSaddmipsol(prob, (int)sol.size(), sol.data(), NULL, NULL);
 		solver->_heur_solutions.clear();
 	}
 
@@ -70,7 +70,7 @@ void XPRS_CC cboptnode(XPRSprob prob, void* vContext, int* feas){
 
 void XPRS_CC cbpreintsol(XPRSprob prob, void* vContext, int isheuristic, int* ifreject, double* cutoff){
 	TSPSolver*solver = (TSPSolver*)vContext;
-	TSPInstance * tsp(solver->_instance);
+	TSPFormulation * tsp(solver->_tsp);
 	DblVector sol;
 	IntListPtrList subtours;
 	if (isheuristic == 1){
@@ -86,7 +86,7 @@ void XPRS_CC cbpreintsol(XPRSprob prob, void* vContext, int isheuristic, int* if
 }
 void XPRS_CC cbintsol(XPRSprob prob, void* vContext){
 	TSPSolver*solver = (TSPSolver*)vContext;
-	TSPInstance * tsp(solver->_instance);
+	TSPFormulation * tsp(solver->_tsp);
 	DblVector sol;
 	IntListPtrList subtours;
 	tsp->getSolution(prob, sol);

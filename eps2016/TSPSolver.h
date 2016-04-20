@@ -1,28 +1,24 @@
 #ifndef __TSP_SOLVER_H_
 #define __TSP_SOLVER_H_
 
-#include "TSPInstance.h"
+#include "TSPFormulation.h"
 #include <xprs.h>
 
 class TSPSolver{
 public:
-	TSPSolver(TSPInstance & instance);
+	TSPSolver(TSPFormulation & instance);
 	~TSPSolver();
-
-	XPRSprob buildProblem();
+	TSPFormulation const& getTSPFormulation()const;
+	TSPFormulation & getTSPFormulation();
 public:
-	TSPInstance * _instance;
-	bool _log;
+	TSPFormulation * _tsp;
+	
 	std::set<IntSetPtr, IntSetPredicate> _knownSolution;
 	int _nCuts;
 
 	std::vector<DblVector> _heur_solutions;
 
 public:
-	int nPoints()const;
-	int nVariables()const;
-
-	void getBreakingCuts(IntListPtrList const &, DblVector & rhs, IntVector & mstart, IntVector & clind);
 	bool log()const;
 	bool &log();
 
