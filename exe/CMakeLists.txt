@@ -9,3 +9,6 @@ TARGET_LINK_LIBRARIES(eps2016_mip eps2016 xprs)
 
 ADD_EXECUTABLE(eps2016_heur eps2016_heur.cc)
 TARGET_LINK_LIBRARIES(eps2016_heur eps2016 xprs)
+
+ADD_EXECUTABLE(flow_build flow_build.cc)
+TARGET_LINK_LIBRARIES(flow_build eps2016 xprs)

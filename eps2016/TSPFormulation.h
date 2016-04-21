@@ -35,4 +35,12 @@ protected:
 	IntMatrix _variables;
 };
 
+class TSPFlowFormulation :TSPFormulation{
+public:
+	//
+	virtual void buildVariable();
+	// build the MIP formulation without sub tour elimination constraints
+	virtual XPRSprob buildProblem(bool active_log);
+
+};
 #endif
