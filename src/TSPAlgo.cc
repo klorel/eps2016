@@ -4,7 +4,7 @@
 #include <iomanip>
 
 TSPAlgo::TSPAlgo(){
-
+	_user_heuristic = false;
 }
 
 
@@ -12,34 +12,11 @@ TSPAlgo::~TSPAlgo(){
 
 }
 
-void TSPAlgo::run_callback(TSPFormulation & tsp, IntVector & output, double & obj){
-
-	TSPSolver solver(tsp);
-	XPRSprob oprob = solver.getTSPFormulation().buildProblem(true);
-	XPRSsetintcontrol(oprob, XPRS_THREADS, 1);
-	//XPRSsetintcontrol(oprob, XPRS_CUTSTRATEGY, 0);
-	//XPRSsetintcontrol(oprob, XPRS_HEURSTRATEGY, 0);
-	//XPRSsetdblcontrol(oprob, XPRS_MIPABSSTOP, 0);
-	//XPRSsetdblcontrol(oprob, XPRS_MIPRELSTOP, 0);
-	//XPRSsetdblcontrol(oprob, XPRS_MIPTOL, 0);
-	XPRSsetcboptnode(oprob, cboptnode, &solver);
-	XPRSsetcbpreintsol(oprob, cbpreintsol, &solver);
-	XPRSsetcbintsol(oprob, cbintsol, &solver);
-
-	XPRSmipoptimize(oprob, "");
-
-	DblVector sol;
-	IntListPtrList subtours;
-	tsp.getMipSolution(oprob, sol);
-
-	std::cout << "Nb of cuts generated " << std::setw(10) << solver._nCuts << std::endl;
-	int nsubtour = tsp.getSubTours(sol, subtours);
-	std::cout << "Nb of sub tour " << std::setw(10) << nsubtour;
-	std::cout << std::endl;
-
-	XPRSgetdblattrib(oprob, XPRS_MIPOBJVAL, &obj);
-	tsp.getTour(sol, output);
-
+bool TSPAlgo::user_heuristic()const{
+	return _user_heuristic;
+}
+bool &TSPAlgo::user_heuristic(){
+	return _user_heuristic;
 }
 
 void TSPAlgo::run_iterative(TSPFormulation & tsp, IntVector & output, double & obj){
@@ -50,8 +27,20 @@ void TSPAlgo::run_iterative(TSPFormulation & tsp, IntVector & output, double & o
 void TSPAlgo::run_iterative(TSPFormulation & tsp, IntVector & output, double & obj, DblVector const & lb, DblVector const & ub){
 	TSPSolver solver(tsp);
 
-	XPRSprob oprob = solver.getTSPFormulation().buildProblem(false);
+	XPRSprob oprob = solver.getTSPFormulation().buildProblemMIP(false);
 	bool log = true;
+	XPRSsetintcontrol(oprob, XPRS_THREADS, 1);
+	//XPRSsetintcontrol(oprob, XPRS_ROOTPRESOLVE, 1);
+	//XPRSsetintcontrol(oprob, XPRS_HEURSTRATEGY, 1);
+	XPRSsetintcontrol(oprob, XPRS_HEURSTRATEGY, XPRS_HEURSTRATEGY_NONE);
+	XPRSsetintcontrol(oprob, XPRS_ROOTPRESOLVE, 0);
+	XPRSsetintcontrol(oprob, XPRS_CUTSTRATEGY, 0);
+	if (_user_heuristic){
+		XPRSsetcbintsol(oprob, cbintsol, &solver);
+	}
+
+	//XPRSsetintcontrol(oprob, XPRS_ROOTPRESOLVE, 0);
+	//XPRSsetintcontrol(oprob, XPRS_HEURSTRATEGY, 0);
 	if (!lb.empty() || !ub.empty()){
 		log = false;
 		//solver.log() = true;
@@ -85,6 +74,13 @@ void TSPAlgo::run_iterative(TSPFormulation& tsp, TSPSolver & solver, XPRSprob & 
 	DblVector sol;
 	IntListPtrList subtours;
 	size_t nCuts(0);
+	int nodes;
+	if (log){
+		std::cout << std::setw(10) << "Obj value";
+		std::cout << std::setw(10) << "Subtours";
+		std::cout << std::setw(10) << "Nodes";
+		std::cout << std::endl;
+	}
 	do{
 		XPRSmipoptimize(oprob, "");
 		mipunfeas = tsp.getMipSolution(oprob, sol);
@@ -99,9 +95,11 @@ void TSPAlgo::run_iterative(TSPFormulation& tsp, TSPSolver & solver, XPRSprob & 
 			std::exit(0);
 		}
 		XPRSgetdblattrib(oprob, XPRS_MIPOBJVAL, &obj);
+		XPRSgetintattrib(oprob, XPRS_NODES, &nodes);
 		if (log){
 			std::cout << std::setw(10) << obj;
 			std::cout << std::setw(10) << nSubTour;
+			std::cout << std::setw(10) << nodes;
 			std::cout << std::endl;
 		}
 	} while (nSubTour > 1);

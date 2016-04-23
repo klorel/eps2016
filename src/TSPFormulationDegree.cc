@@ -1,20 +1,20 @@
-#include "TSPFormulation.h"
+#include "TSPFormulationDegree.h"
 #include "callback.h"
 
-TSPFormulation::~TSPFormulation() {
 
-}
-
-TSPFormulation::TSPFormulation(std::string const & fileName) :
-		TSPInstance(fileName) {
+TSPFormulationDegree::TSPFormulationDegree(std::string const & fileName) :
+TSPFormulation(fileName) {
 	buildVariable();
 }
+TSPFormulationDegree::~TSPFormulationDegree() {
 
-int TSPFormulation::nVariables() const {
+}
+
+int TSPFormulationDegree::nVariables() const {
 	// (i, j) telle que i<j
 	return nPoints() * (nPoints() - 1) / 2;
 }
-void TSPFormulation::buildVariable() {
+void TSPFormulationDegree::buildVariable() {
 	int npoints(nPoints());
 	int ncols(0);
 	_variables.assign(npoints, IntVector(npoints, -1));
@@ -26,7 +26,7 @@ void TSPFormulation::buildVariable() {
 	}
 }
 
-double TSPFormulation::computeCost(DblVector const & input) {
+double TSPFormulationDegree::computeCost(DblVector const & input) {
 	double result(0);
 	for (int i(0); i < nPoints(); ++i) {
 		for (int j(i + 1); j < nPoints(); ++j) {
@@ -38,11 +38,7 @@ double TSPFormulation::computeCost(DblVector const & input) {
 	return result;
 }
 
-int TSPFormulation::getVariable(int i, int j) {
-	return _variables[i][j];
-}
-
-int TSPFormulation::getSubTours(DblVector const & sol, IntListPtrList& result) {
+int TSPFormulationDegree::getSubTours(DblVector const & sol, IntListPtrList& result) {
 	result.clear();
 
 	IntListPtrVector subtour(nPoints(), IntListPtr());
@@ -64,7 +60,7 @@ int TSPFormulation::getSubTours(DblVector const & sol, IntListPtrList& result) {
 				//std::cout << "sub_j : " << subtour[inSubTour[j]] << std::endl;
 				IntList clone(*subtour[inSubTour[j]]);
 				subtour[inSubTour[i]]->splice(subtour[inSubTour[i]]->begin(),
-						*subtour[inSubTour[j]]);
+					*subtour[inSubTour[j]]);
 
 				for (auto const k : clone) {
 					//std::cout << "inSubTour[" << k << "]=" << inSubTour[i] << std::endl;
@@ -96,7 +92,7 @@ int TSPFormulation::getSubTours(DblVector const & sol, IntListPtrList& result) {
 
 // input  : a tour
 // output : a mip solution
-void TSPFormulation::getSol(IntVector const & input, DblVector & output) {
+void TSPFormulationDegree::getSol(IntVector const & input, DblVector & output) {
 	output.assign(nVariables(), 0);
 	for (int pos(1); pos < nPoints(); ++pos) {
 		int const current(input[pos]);
@@ -109,7 +105,7 @@ void TSPFormulation::getSol(IntVector const & input, DblVector & output) {
 
 // input  : a mip solution
 // output : a tour
-void TSPFormulation::getTour(DblVector const & input, IntVector & output) {
+void TSPFormulationDegree::getTour(DblVector const & input, IntVector & output) {
 	std::vector<IntPair> intPairs(nPoints(), IntPair(nPoints(), nPoints()));
 	for (int i(0); i < nPoints(); ++i) {
 		for (int j(i + 1); j < nPoints(); ++j) {
@@ -135,12 +131,13 @@ void TSPFormulation::getTour(DblVector const & input, IntVector & output) {
 		if (pos > 0) {
 			int const prev(output[pos - 1]);
 			output[pos + 1] = pair.first == prev ? pair.second : pair.first;
-		} else {
+		}
+		else {
 			output[pos + 1] = pair.first;
 		}
 	}
 }
-XPRSprob TSPFormulation::buildProblem(bool active_log) {
+XPRSprob TSPFormulationDegree::buildProblemLP(bool active_log) {
 	log() = active_log;
 	XPRSprob oprob;
 	int status;
@@ -151,7 +148,7 @@ XPRSprob TSPFormulation::buildProblem(bool active_log) {
 	if (status)
 		errormsg("XPRSsetcbmessage", __LINE__, status);
 	XPRSloadlp(oprob, "tsp", 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-			NULL, NULL, NULL);
+		NULL, NULL, NULL);
 	if (status)
 		errormsg("XPRSloadlp", __LINE__, status);
 	// create variables
@@ -168,7 +165,7 @@ XPRSprob TSPFormulation::buildProblem(bool active_log) {
 	DblVector l(ncols, 0);
 	DblVector u(ncols, 1);
 	XPRSaddcols(oprob, ncols, 0, obj.data(), NULL, NULL, NULL, l.data(),
-			u.data());
+		u.data());
 	if (status)
 		errormsg("XPRSaddcols", __LINE__, status);
 	CharVector b(ncols, 'B');
@@ -194,14 +191,14 @@ XPRSprob TSPFormulation::buildProblem(bool active_log) {
 	CharVector rowType(npoints, 'E');
 	DblVector rhs(npoints, 2);
 	XPRSaddrows(oprob, npoints, ncoeffs, rowType.data(), rhs.data(), NULL,
-			mstart.data(), clind.data(), dmatval.data());
+		mstart.data(), clind.data(), dmatval.data());
 	if (status)
 		errormsg("XPRSaddrows", __LINE__, status);
 	return oprob;
 }
 
-void TSPFormulation::getBreakingCuts(IntListPtrList const & tours,
-		DblVector & rhs, IntVector & mstart, IntVector & clind) {
+void TSPFormulationDegree::getBreakingCuts(IntListPtrList const & tours,
+	DblVector & rhs, IntVector & mstart, IntVector & clind) {
 	rhs.reserve(tours.size());
 	mstart.reserve(rhs.size() + 1);
 
@@ -211,6 +208,7 @@ void TSPFormulation::getBreakingCuts(IntListPtrList const & tours,
 
 	for (auto const & tourPtr : tours) {
 		IntList const & tour(*tourPtr);
+		//std::cout << tour << std::endl;
 		if (tour.size() > 1) {
 			rhs.push_back(static_cast<int>(tour.size() - 1));
 			mstart.push_back(static_cast<int>(clind.size()));
@@ -223,86 +221,4 @@ void TSPFormulation::getBreakingCuts(IntListPtrList const & tours,
 			}
 		}
 	}
-}
-
-void TSPFlowFormulation::buildVariable() {
-	int npoints(nPoints());
-	int ncols(0);
-	_variables.assign(npoints, IntVector(npoints, -1));
-	for (int i(0); i < npoints; ++i) {
-		for (int j(0); j < npoints; ++j, ++ncols) {
-			if (i != j) {
-				_variables[i][j] = ncols;
-			}
-		}
-	}
-}
-
-// build the MIP formulation without sub tour elimination constraints
-XPRSprob TSPFlowFormulation::buildProblem(bool active_log) {
-	log() = active_log;
-	XPRSprob oprob;
-	int status;
-	status = XPRScreateprob(&oprob);
-	if (status)
-		errormsg("XPRScreateprob", __LINE__, status);
-	XPRSsetcbmessage(oprob, cbmessage, this);
-	if (status)
-		errormsg("XPRSsetcbmessage", __LINE__, status);
-	XPRSloadlp(oprob, "tsp", 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-			NULL, NULL, NULL);
-	if (status)
-		errormsg("XPRSloadlp", __LINE__, status);
-	// create variables
-	int npoints(nPoints());
-	int nvariables(npoints * (npoints - 1));
-	int ncols(0);
-	DblVector obj(nvariables, 0);
-	IntVector ind(nvariables, 0);
-	for (int i(0); i < npoints; ++i) {
-		for (int j(0); j < npoints; ++j, ++ncols) {
-			if (i != j) {
-				int id(_variables[i][j]);
-				obj[id] = _distances[i][j];
-				ind[ncols] = ncols;
-			}
-		}
-	}
-	DblVector lower(ncols, 0);
-	DblVector upper(ncols, 1);
-	XPRSaddcols(oprob, ncols, 0, obj.data(), NULL, NULL, NULL, lower.data(),
-			upper.data());
-
-	XPRSwriteprob(oprob, "flow.lp", "lp");
-
-	std::exit(0);
-	if (status)
-		errormsg("XPRSaddcols", __LINE__, status);
-	CharVector b(ncols, 'B');
-	XPRSchgcoltype(oprob, ncols, ind.data(), b.data());
-	if (status)
-		errormsg("XPRSchgcoltype", __LINE__, status);
-	// create degree constraint
-	IntVector mstart(npoints + 1);
-	IntVector clind(npoints * (npoints - 1));
-	DblVector dmatval(npoints * (npoints - 1), 1);
-
-	int ncoeffs(0);
-	for (int row(0); row < npoints; ++row) {
-		mstart[row] = ncoeffs;
-		for (int col(0); col < row; ++col, ++ncoeffs) {
-			clind[ncoeffs] = getVariable(row, col);
-		}
-		for (int col(row + 1); col < npoints; ++col, ++ncoeffs) {
-			clind[ncoeffs] = getVariable(row, col);
-		}
-	}
-	mstart.back() = ncoeffs;
-	CharVector rowType(npoints, 'E');
-	DblVector rhs(npoints, 2);
-	XPRSaddrows(oprob, npoints, ncoeffs, rowType.data(), rhs.data(), NULL,
-			mstart.data(), clind.data(), dmatval.data());
-	if (status)
-		errormsg("XPRSaddrows", __LINE__, status);
-	return oprob;
 }

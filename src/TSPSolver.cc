@@ -38,6 +38,7 @@ int TSPSolver::add(IntListPtrList const & subTours, XPRSprob prob, bool isCut){
 	IntVector _mtype;
 
 	if (subTours.size() > 1){
+		
 		_tsp->getBreakingCuts(subTours, rhs, mstart, clind);
 		mstart.push_back(static_cast<int>(clind.size()));
 

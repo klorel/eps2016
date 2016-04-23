@@ -2,13 +2,14 @@
 
 #include "TSPInstance.h"
 #include "TSPHeuristic.h"
+#include "TSPFormulationDegree.h"
 
 int main(int argc, char** argv){
 
 	//std::srand(std::time(0)); // use current time as seed for random generator
 	std::srand(10); // use current time as seed for random generator
 	XPRSinit("");
-	TSPFormulation tsp(argv[1]);
+	TSPFormulationDegree tsp(argv[1]);
 	TSPSolver solver(tsp);
 	TSPHeuristic heuristic(solver);
 

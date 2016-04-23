@@ -37,6 +37,7 @@ void TSPInstance::read(std::string const & fileName){
 			_coordinates.push_back(std::make_pair(x, y));
 		}
 		file.close();
+		std::cout << "TSP with " << nPoints() << " points " << std::endl;
 	}
 	else{
 		std::cout << "unable to open : " << fileName << std::endl;
@@ -82,18 +83,16 @@ int TSPInstance::getMipSolution(XPRSprob prob, DblVector & sol){
 
 int TSPInstance::getSolution(XPRSprob prob, DblVector & sol){
 	int n;
-	XPRSgetintattrib(prob, XPRS_COLS, &n);
+	XPRSgetintattrib(prob, XPRS_ORIGINALCOLS, &n);
 	sol.resize(n);
 
 	int MIPINFEAS;
 	XPRSgetintattrib(prob, XPRS_MIPINFEAS, &MIPINFEAS);
-	if (MIPINFEAS == 0){
+	if (MIPINFEAS <= 0){
 		XPRSgetlpsol(prob, sol.data(), NULL, NULL, NULL);
 	}
 	return MIPINFEAS;
 }
-
-
 
 void TSPInstance::randomInit(IntVector & output){
 	int const n(nPoints());

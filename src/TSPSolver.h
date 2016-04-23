@@ -17,7 +17,7 @@ public:
 	int _nCuts;
 
 	std::vector<DblVector> _heur_solutions;
-
+	std::set<IntSetPtr, IntSetPredicate> _knownHeurSolution;
 public:
 	bool log()const;
 	bool &log();

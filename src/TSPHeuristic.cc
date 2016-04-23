@@ -79,7 +79,7 @@ bool TSPHeuristic::localSearch(IntVector const & input, SolutionHeur & output, b
 }
 
 // chose a point at random and then its k neighbor in the solution, 
-size_t TSPHeuristic::shake(size_t k, IntVector const & input, IntVector & subproblem, DblVector & lb, DblVector & ub){
+size_t TSPHeuristic::shake(size_t k, IntVector const & input, DblVector & lb, DblVector & ub){
 	int const n(_tsp->nPoints());
 	int const p(_tsp->nVariables());
 
@@ -93,14 +93,25 @@ size_t TSPHeuristic::shake(size_t k, IntVector const & input, IntVector & subpro
 	int random_index = std::rand() % n;
 	size_t const current(input[random_index]);
 	//std::cout << "shaking index " << random_index << ", " << current << std::endl;
-	subproblem.clear();
-	subproblem.push_back((int)current);
+	IntSet trimmer;
+	trimmer.insert((int)current);
 	for (size_t i(0); i < k; ++i){
-		size_t const before(input[(random_index - i - 1) % n]);
-		size_t const after(input[(random_index + i + 1) % n]);
-		subproblem.push_back((int)before);
-		subproblem.push_back((int)after);
+		size_t ibefore((random_index - i - 1) % n);
+		size_t iafter((random_index + i + 1) % n);
+		size_t const before(input[ibefore]);
+		size_t const after(input[iafter]);
+		if (before == after){
+			//std::cout << "error" << std::endl;
+		}
+		if (!trimmer.insert((int)before).second){
+			//std::cout << "error" << std::endl;
+		}
+		if (!trimmer.insert((int)after).second){
+			//std::cout << "error" << std::endl;
+		}
 	}
+	IntVector subproblem(trimmer.size());
+	std::copy(trimmer.begin(), trimmer.end(), subproblem.begin());
 	//std::cout << "creating a subproblem of size " << subproblem.size() << std::endl;
 	for (size_t i(0); i < subproblem.size(); ++i){
 		int const vi(subproblem[i]);
@@ -136,9 +147,8 @@ void TSPHeuristic::vns(size_t kMax, IntVector const & input, SolutionHeur & outp
 		for (size_t k(1); k < kMax + 1; ++k){
 			++ite;
 			//std::cout << current.second << std::endl;
-			IntVector subproblem;
 			// create a neighborhood
-			size_t subsize = shake(k, current.second, subproblem, lb, ub);
+			size_t subsize = shake(k, current.second, lb, ub);
 			// solve 
 			tspAlgo.run_iterative(*_tsp, current.second, current.first, lb, ub);
 			// accept or not the solution

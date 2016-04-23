@@ -12,7 +12,7 @@ public:
 public:
 	bool localSearch(IntVector const & input, SolutionHeur & output, bool log);
 
-	size_t shake(size_t k, IntVector const & input, IntVector & subproblem, DblVector & lb, DblVector & ub);
+	size_t shake(size_t k, IntVector const & input, DblVector & lb, DblVector & ub);
 	void vns(size_t kMax, IntVector const & input, SolutionHeur & output);
 
 private:
